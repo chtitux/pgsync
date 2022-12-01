@@ -131,12 +131,17 @@ module PgSync
           raise Error, "Primary key required to sync specific rows"
         end
 
-        # create a temp table
-        temp_table = "pgsync_#{rand(1_000_000_000)}"
-        destination.execute("CREATE TEMPORARY TABLE #{quote_ident_full(temp_table)} AS TABLE #{quoted_table} WITH NO DATA")
+        if opts[:from_local_schema]
+          # use the table from a local schema, without a temporary table
+          data_source_table = [quote_ident(opts[:from_local_schema]), quote_ident(table.name)].join('.')
+        else
+          # create a temp table
+          data_source_table = "pgsync_#{rand(1_000_000_000)}"
+          destination.execute("CREATE TEMPORARY TABLE #{quote_ident_full(data_source_table)} AS TABLE #{quoted_table} WITH NO DATA")
 
-        # load data
-        copy(copy_to_command, dest_table: temp_table, dest_fields: fields)
+          # load data
+          copy(copy_to_command, dest_table: data_source_table, dest_fields: fields)
+        end
 
         on_conflict = primary_key.map { |pk| quote_ident(pk) }.join(", ")
         action =
@@ -150,7 +155,7 @@ module PgSync
               "NOTHING"
             end
           end
-        destination.execute("INSERT INTO #{quoted_table} (#{fields}) (SELECT #{fields} FROM #{quote_ident_full(temp_table)}) ON CONFLICT (#{on_conflict}) DO #{action}")
+        destination.execute("INSERT INTO #{quoted_table} (#{fields}) (SELECT #{fields} FROM #{data_source_table}) ON CONFLICT (#{on_conflict}) DO #{action}")
       else
         # use delete instead of truncate for foreign keys
         if opts[:defer_constraints_v1] || opts[:defer_constraints_v2]

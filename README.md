@@ -246,6 +246,34 @@ pgsync large_table --in-batches
 
 The script will resume where it left off when run again, making it great for backfills.
 
+## Copy without temporary table
+To skip data copying to a temporary table, it is possible to use `--from-local-schema` option to read source tables from an other schema while copying them.
+
+```sh
+bundle exec exe/pgsync --preserve --fdw-schema=fdw_schema table1
+```
+
+This can be used with tables from a Foreign Data Wrapper. Here is the example to setup it:
+```sql
+-- To be executed on the target server
+CREATE EXTENSION IF NOT EXISTS postgres_fdw;
+
+CREATE SERVER IF NOT EXISTS restored FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'source-server', port '5432', dbname 'source_db');
+
+-- Default is set to 100 and can reduce throughput
+ALTER SERVER restored OPTIONS (fetch_size '50000');
+
+CREATE USER MAPPING FOR USER
+  SERVER fdw_source
+  OPTIONS (user 'source_user', password 'XXX_source_user_password_XXX');
+
+-- Create schema
+
+CREATE SCHEMA "fdw_schema";
+
+IMPORT FOREIGN SCHEMA "public" FROM SERVER fdw_source INTO "fdw_schema";
+```
+
 ## Connection Security
 
 Always make sure your [connection is secure](https://ankane.org/postgres-sslmode-explained) when connecting to a database over a network you don’t fully trust. Your best option is to connect over SSH or a VPN. Another option is to use `sslmode=verify-full`. If you don’t do this, your database credentials can be compromised.

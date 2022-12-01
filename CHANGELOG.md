@@ -1,3 +1,7 @@
+## 0.8.0
+
+- Introduce `--from-local-schema` to copy data from tables in a different schema, rather than via a temporary table
+
 ## 0.7.3 (2022-11-09)
 
 - Fixed issue with pg 1.4.4

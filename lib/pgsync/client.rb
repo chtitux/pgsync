@@ -94,6 +94,7 @@ module PgSync
       o.boolean "--fail-fast", "stop on the first failed table", default: false
       o.boolean "--no-rules", "don't apply data rules", default: false
       o.boolean "--no-sequences", "don't sync sequences", default: false
+      o.string "--fdw-schema", "schema where FDW tables are present"
 
       # not shown in help
       # o.separator ""
